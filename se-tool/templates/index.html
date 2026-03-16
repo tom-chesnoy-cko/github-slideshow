@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SE Pipeline — Checkout.com</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #e8e8e8;
+      min-height: 100vh;
+      padding: 32px 16px;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 36px;
+    }
+
+    .logo {
+      background: #0070f3;
+      color: white;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    header p {
+      font-size: 13px;
+      color: #666;
+      margin-top: 2px;
+    }
+
+    .input-section {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 28px;
+    }
+
+    .input-section label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 200px;
+      background: #0a0a0a;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      color: #e8e8e8;
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 14px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.15s;
+      font-family: inherit;
+    }
+
+    textarea:focus { border-color: #0070f3; }
+    textarea::placeholder { color: #444; }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    button.generate {
+      background: #0070f3;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+
+    button.generate:hover { background: #0060d3; }
+    button.generate:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .status {
+      font-size: 13px;
+      color: #666;
+    }
+
+    .status.loading { color: #0070f3; }
+    .status.error { color: #e55; }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #333;
+      border-top-color: #0070f3;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .outputs {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
+    .output-card {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 12px;
+      overflow: hidden;
+      display: none;
+    }
+
+    .output-card.visible { display: block; }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid #1a1a1a;
+      background: #0d0d0d;
+    }
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-tag {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .tag-sdd { background: #0070f315; color: #4da6ff; border: 1px solid #0070f330; }
+    .tag-sf  { background: #00b37e15; color: #3ecf8e; border: 1px solid #00b37e30; }
+    .tag-em  { background: #f59e0b15; color: #fbbf24; border: 1px solid #f59e0b30; }
+
+    .card-label { font-size: 14px; font-weight: 600; color: #ddd; }
+
+    button.copy {
+      background: #1a1a1a;
+      color: #888;
+      border: 1px solid #2a2a2a;
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    button.copy:hover { background: #222; color: #ccc; }
+    button.copy.copied { color: #3ecf8e; border-color: #3ecf8e40; }
+
+    .card-body {
+      padding: 20px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #ccc;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* markdown-ish rendering */
+    .card-body h2 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      margin: 18px 0 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #1e1e1e;
+    }
+
+    .card-body h2:first-child { margin-top: 0; }
+
+    .card-body strong { color: #e8e8e8; font-weight: 600; }
+
+    .card-body ul, .card-body ol {
+      padding-left: 20px;
+      margin: 6px 0;
+    }
+
+    .card-body li { margin: 3px 0; }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #444;
+    }
+
+    .empty-state svg { margin-bottom: 14px; opacity: 0.3; }
+    .empty-state p { font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+          <span class="logo">CKO</span>
+          <h1>SE Pipeline</h1>
+        </div>
+        <p>Paste a call transcript → get your SDD, Salesforce update, and follow-up email instantly.</p>
+      </div>
+    </header>
+
+    <div class="input-section">
+      <label>Call Transcript</label>
+      <textarea id="transcript" placeholder="Paste your Gong or Zoom transcript here..."></textarea>
+      <div class="actions">
+        <button class="generate" id="generateBtn" onclick="generate()">Generate outputs</button>
+        <span class="status" id="status"></span>
+      </div>
+    </div>
+
+    <div class="outputs" id="outputs">
+      <div class="empty-state" id="emptyState">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+        <p>Your generated outputs will appear here.</p>
+      </div>
+
+      <div class="output-card" id="card-sdd">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="card-tag tag-sdd">SDD</span>
+            <span class="card-label">Solution Design Document</span>
+          </div>
+          <button class="copy" onclick="copy('sdd', this)">Copy</button>
+        </div>
+        <div class="card-body" id="body-sdd"></div>
+      </div>
+
+      <div class="output-card" id="card-sf">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="card-tag tag-sf">SF</span>
+            <span class="card-label">Salesforce Update</span>
+          </div>
+          <button class="copy" onclick="copy('sf', this)">Copy</button>
+        </div>
+        <div class="card-body" id="body-sf"></div>
+      </div>
+
+      <div class="output-card" id="card-em">
+        <div class="card-header">
+          <div class="card-title">
+            <span class="card-tag tag-em">EMAIL</span>
+            <span class="card-label">Follow-up Email</span>
+          </div>
+          <button class="copy" onclick="copy('em', this)">Copy</button>
+        </div>
+        <div class="card-body" id="body-em"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const rawContent = {};
+
+    function setStatus(msg, type = '') {
+      const el = document.getElementById('status');
+      el.className = 'status ' + type;
+      el.innerHTML = type === 'loading'
+        ? `<span class="spinner"></span>${msg}`
+        : msg;
+    }
+
+    function renderMarkdown(text) {
+      return text
+        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^- (.+)$/gm, '<li>$1</li>')
+        .replace(/(<li>.*<\/li>\n?)+/g, s => `<ul>${s}</ul>`)
+        .replace(/\n\n/g, '<br><br>')
+        .replace(/\n/g, '\n');
+    }
+
+    async function generate() {
+      const transcript = document.getElementById('transcript').value.trim();
+      if (!transcript) { setStatus('Please paste a transcript first.', 'error'); return; }
+
+      const btn = document.getElementById('generateBtn');
+      btn.disabled = true;
+      setStatus('Generating — this takes ~15 seconds...', 'loading');
+
+      ['sdd', 'sf', 'em'].forEach(id => {
+        document.getElementById('card-' + id).classList.remove('visible');
+      });
+      document.getElementById('emptyState').style.display = 'block';
+
+      try {
+        const res = await fetch('/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transcript }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setStatus(data.error || 'Something went wrong.', 'error');
+          return;
+        }
+
+        document.getElementById('emptyState').style.display = 'none';
+
+        rawContent['sdd'] = data.sdd;
+        rawContent['sf']  = data.salesforce;
+        rawContent['em']  = data.followup;
+
+        document.getElementById('body-sdd').innerHTML = renderMarkdown(data.sdd);
+        document.getElementById('body-sf').innerHTML  = renderMarkdown(data.salesforce);
+        document.getElementById('body-em').innerHTML  = renderMarkdown(data.followup);
+
+        ['sdd', 'sf', 'em'].forEach(id => {
+          document.getElementById('card-' + id).classList.add('visible');
+        });
+
+        setStatus('Done.', '');
+      } catch (e) {
+        setStatus('Network error. Is the server running?', 'error');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    async function copy(id, btn) {
+      const text = rawContent[id] || '';
+      await navigator.clipboard.writeText(text);
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    }
+
+    document.getElementById('transcript').addEventListener('keydown', e => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') generate();
+    });
+  </script>
+</body>
+</html>
